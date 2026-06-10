@@ -94,42 +94,35 @@ app.get('/estoque-full/:userId', async (req, res) => {
       offset += 100;
     }
     if (!itemIds.length) return res.json({ estoque: {}, total_itens: 0 });
+
     const estoqueMap = {};
+
     for (let i = 0; i < itemIds.length; i += 20) {
       const chunk = itemIds.slice(i, i + 20).join(',');
+      // Buscar seller_sku e available_quantity juntos
       const r2 = await fetch(
-        `https://api.mercadolibre.com/items?ids=${chunk}&attributes=id,seller_sku,inventory_id,available_quantity`,
+        `https://api.mercadolibre.com/items?ids=${chunk}&attributes=id,seller_sku,available_quantity`,
         { headers: { Authorization: `Bearer ${token}` } }
       );
       const items = await r2.json();
+
       for (const { body } of items) {
         if (!body || body.error) continue;
         const sku = body.seller_sku;
         if (!sku) continue;
-        if (body.inventory_id) {
-          try {
-            const rInv = await fetch(
-              `https://api.mercadolibre.com/inventories/${body.inventory_id}/stock/fulfillment`,
-              { headers: { Authorization: `Bearer ${token}` } }
-            );
-            const inv = await rInv.json();
-            const qtdFull = inv.available_quantity || inv.total || 0;
-            estoqueMap[sku] = (estoqueMap[sku] || 0) + qtdFull;
-          } catch(e) {
-            estoqueMap[sku] = (estoqueMap[sku] || 0) + (body.available_quantity || 0);
-          }
-        } else {
-          estoqueMap[sku] = (estoqueMap[sku] || 0) + (body.available_quantity || 0);
-        }
+        // available_quantity no full já retorna o estoque disponível no fulfillment
+        const qtd = body.available_quantity || 0;
+        estoqueMap[sku] = (estoqueMap[sku] || 0) + qtd;
       }
     }
+
     res.json({ estoque: estoqueMap, total_itens: itemIds.length });
   } catch (e) {
     res.status(500).json({ error: e.message });
   }
 });
 
-app.get('/', (req, res) => res.json({ status: 'ok', app: 'Brava Backend v2' }));
+app.get('/', (req, res) => res.json({ status: 'ok', app: 'Brava Backend v3' }));
 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`Brava backend v2 rodando na porta ${PORT}`));
+app.listen(PORT, () => console.log(`Brava backend v3 rodando na porta ${PORT}`));
