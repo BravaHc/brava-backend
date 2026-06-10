@@ -93,12 +93,15 @@ app.get('/estoque-full/:userId', async (req, res) => {
       itemIds = itemIds.concat(data.results || []);
       offset += 100;
     }
-    if (!itemIds.length) return res.json({ estoque: {}, total_itens: 0 });
+
+    // Filtra só IDs MLB (não MLBU)
+    const mlbIds = itemIds.filter(id => id.startsWith('MLB') && !id.startsWith('MLBU'));
+    if (!mlbIds.length) return res.json({ estoque: {}, total_itens: 0 });
 
     const estoqueMap = {};
 
-    for (let i = 0; i < itemIds.length; i += 20) {
-      const chunk = itemIds.slice(i, i + 20).join(',');
+    for (let i = 0; i < mlbIds.length; i += 20) {
+      const chunk = mlbIds.slice(i, i + 20).join(',');
       const r2 = await fetch(
         `https://api.mercadolibre.com/items?ids=${chunk}&attributes=id,seller_sku,inventory_id,available_quantity`,
         { headers: { Authorization: `Bearer ${token}` } }
@@ -120,13 +123,13 @@ app.get('/estoque-full/:userId', async (req, res) => {
       }
     }
 
-    res.json({ estoque: estoqueMap, total_itens: itemIds.length });
+    res.json({ estoque: estoqueMap, total_itens: mlbIds.length });
   } catch (e) {
     res.status(500).json({ error: e.message });
   }
 });
 
-app.get('/', (req, res) => res.json({ status: 'ok', app: 'Brava Backend v4' }));
+app.get('/', (req, res) => res.json({ status: 'ok', app: 'Brava Backend v5' }));
 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`Brava backend v4 rodando na porta ${PORT}`));
+app.listen(PORT, () => console.log(`Brava backend v5 rodando na porta ${PORT}`));
