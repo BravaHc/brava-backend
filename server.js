@@ -133,7 +133,7 @@ app.get('/estoque-full/:userId', async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-app.get('/', (req, res) => res.json({ status: 'ok', app: 'Brava Backend v7' }));
+app.get('/', (req, res) => res.json({ status: 'ok', app: 'Brava Backend v8' }));
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`Brava backend v8 rodando na porta ${PORT}`));
