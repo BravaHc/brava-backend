@@ -99,9 +99,8 @@ app.get('/estoque-full/:userId', async (req, res) => {
 
     for (let i = 0; i < itemIds.length; i += 20) {
       const chunk = itemIds.slice(i, i + 20).join(',');
-      // Buscar seller_sku e available_quantity juntos
       const r2 = await fetch(
-        `https://api.mercadolibre.com/items?ids=${chunk}&attributes=id,seller_sku,available_quantity`,
+        `https://api.mercadolibre.com/items?ids=${chunk}&attributes=id,seller_sku,inventory_id,available_quantity`,
         { headers: { Authorization: `Bearer ${token}` } }
       );
       const items = await r2.json();
@@ -110,9 +109,14 @@ app.get('/estoque-full/:userId', async (req, res) => {
         if (!body || body.error) continue;
         const sku = body.seller_sku;
         if (!sku) continue;
-        // available_quantity no full já retorna o estoque disponível no fulfillment
-        const qtd = body.available_quantity || 0;
-        estoqueMap[sku] = (estoqueMap[sku] || 0) + qtd;
+        if (body.inventory_id) {
+          const rInv = await fetch(
+            `https://api.mercadolibre.com/inventories/${body.inventory_id}/stock/fulfillment`,
+            { headers: { Authorization: `Bearer ${token}` } }
+          );
+          const inv = await rInv.json();
+          estoqueMap[sku] = (estoqueMap[sku] || 0) + (inv.available_quantity || 0);
+        }
       }
     }
 
@@ -122,7 +126,7 @@ app.get('/estoque-full/:userId', async (req, res) => {
   }
 });
 
-app.get('/', (req, res) => res.json({ status: 'ok', app: 'Brava Backend v3' }));
+app.get('/', (req, res) => res.json({ status: 'ok', app: 'Brava Backend v4' }));
 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`Brava backend v3 rodando na porta ${PORT}`));
+app.listen(PORT, () => console.log(`Brava backend v4 rodando na porta ${PORT}`));
