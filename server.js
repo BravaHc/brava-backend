@@ -23,6 +23,7 @@ const ITEM_SKU_MAP = {
   'MLB6115761644':'RCAI-2038','MLB4695336387':'RCAI-2037','MLB4378365713':'RCAI-2037',
   'MLB4440283661':'RCAI-2037','MLB6194445692':'RCAI-2037','MLB6201018700':'RCAI-2037',
   'MLB4609950961':'Mesa 180cm','MLB4620939401':'Mesa 180cm','MLB5480335774':'RCAI-072',
+  'MLB4671177719':'44.145','MLB6723388622':'44.146','MLB4671341907':'28.788',
 };
 
 app.post('/auth/token', async (req, res) => {
@@ -135,4 +136,4 @@ app.get('/estoque-full/:userId', async (req, res) => {
 app.get('/', (req, res) => res.json({ status: 'ok', app: 'Brava Backend v7' }));
 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`Brava backend v7 rodando na porta ${PORT}`));
+app.listen(PORT, () => console.log(`Brava backend v8 rodando na porta ${PORT}`));
