@@ -80,26 +80,48 @@ app.get('/estoque-full/:userId', async (req, res) => {
   const token = req.headers.authorization?.replace('Bearer ', '');
   const { userId } = req.params;
   try {
-    const r = await fetch(
-      `https://api.mercadolibre.com/users/${userId}/items/search?limit=100`,
-      { headers: { Authorization: `Bearer ${token}` } }
-    );
-    const data = await r.json();
-    const itemIds = data.results || [];
-    if (!itemIds.length) return res.json({ estoque: {} });
+    let itemIds = [];
+    let offset = 0;
+    let total = 1;
+    while (offset < total && itemIds.length < 200) {
+      const r = await fetch(
+        `https://api.mercadolibre.com/users/${userId}/items/search?limit=100&offset=${offset}`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      const data = await r.json();
+      total = data.paging?.total || 0;
+      itemIds = itemIds.concat(data.results || []);
+      offset += 100;
+    }
+    if (!itemIds.length) return res.json({ estoque: {}, total_itens: 0 });
     const estoqueMap = {};
     for (let i = 0; i < itemIds.length; i += 20) {
       const chunk = itemIds.slice(i, i + 20).join(',');
       const r2 = await fetch(
-        `https://api.mercadolibre.com/items?ids=${chunk}&attributes=id,seller_sku,available_quantity`,
+        `https://api.mercadolibre.com/items?ids=${chunk}&attributes=id,seller_sku,inventory_id,available_quantity`,
         { headers: { Authorization: `Bearer ${token}` } }
       );
       const items = await r2.json();
-      items.forEach(({ body }) => {
-        if (body?.seller_sku) {
-          estoqueMap[body.seller_sku] = (estoqueMap[body.seller_sku] || 0) + (body.available_quantity || 0);
+      for (const { body } of items) {
+        if (!body || body.error) continue;
+        const sku = body.seller_sku;
+        if (!sku) continue;
+        if (body.inventory_id) {
+          try {
+            const rInv = await fetch(
+              `https://api.mercadolibre.com/inventories/${body.inventory_id}/stock/fulfillment`,
+              { headers: { Authorization: `Bearer ${token}` } }
+            );
+            const inv = await rInv.json();
+            const qtdFull = inv.available_quantity || inv.total || 0;
+            estoqueMap[sku] = (estoqueMap[sku] || 0) + qtdFull;
+          } catch(e) {
+            estoqueMap[sku] = (estoqueMap[sku] || 0) + (body.available_quantity || 0);
+          }
+        } else {
+          estoqueMap[sku] = (estoqueMap[sku] || 0) + (body.available_quantity || 0);
         }
-      });
+      }
     }
     res.json({ estoque: estoqueMap, total_itens: itemIds.length });
   } catch (e) {
@@ -107,7 +129,7 @@ app.get('/estoque-full/:userId', async (req, res) => {
   }
 });
 
-app.get('/', (req, res) => res.json({ status: 'ok', app: 'Brava Backend' }));
+app.get('/', (req, res) => res.json({ status: 'ok', app: 'Brava Backend v2' }));
 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`Brava backend rodando na porta ${PORT}`));
+app.listen(PORT, () => console.log(`Brava backend v2 rodando na porta ${PORT}`));
